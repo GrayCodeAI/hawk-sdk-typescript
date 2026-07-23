@@ -1,0 +1,50 @@
+{
+  "name": "hawk-sdk",
+  "version": "0.1.0",
+  "description": "Dependency-free TypeScript client for the Hawk daemon API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "VERSION"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "keywords": [
+    "hawk",
+    "sdk",
+    "ai",
+    "agent",
+    "daemon",
+    "client",
+    "graycode"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GrayCodeAI/hawk-sdk-typescript.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

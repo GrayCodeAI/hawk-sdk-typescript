@@ -42,7 +42,9 @@ test("agent resumes a configured session", async () => {
   });
   try {
     const client = new HawkClient({ baseURL: server.url });
-    const agent = new Agent(client, { memory: { enabled: true, sessionID: "sess-1" } });
+    const agent = new Agent(client, {
+      memory: { enabled: true, sessionID: "sess-1" },
+    });
     await agent.chat("hi");
     assert.equal(seenSession, "sess-1");
   } finally {
@@ -105,6 +107,29 @@ test("agent runs the tool execution loop until stop", async () => {
     assert.equal(resp.response, "the answer is 42");
     assert.equal(round, 2);
     assert.equal(toolArgs[0]?.content, "result for x");
+  } finally {
+    await server.close();
+  }
+});
+
+test("agent.chatStream returns a streaming reader", async () => {
+  const server = await startServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/event-stream" });
+    res.write("event: delta\ndata: streamed\n\n");
+    res.write("data: [DONE]\n\n");
+    res.end();
+  });
+  try {
+    const client = new HawkClient({ baseURL: server.url });
+    const agent = new Agent(client, { model: "m" });
+    const reader = await agent.chatStream("hello");
+    const events: { event: string; data: string }[] = [];
+    for await (const ev of reader) {
+      events.push(ev);
+    }
+    assert.equal(events.length, 2);
+    assert.equal(events[0]?.data, "streamed");
+    assert.equal(events[1]?.data, "[DONE]");
   } finally {
     await server.close();
   }

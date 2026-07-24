@@ -72,7 +72,29 @@ test("chatStream surfaces non-200 as a typed error", async () => {
   });
   try {
     const client = new HawkClient({ baseURL: server.url });
-    await assert.rejects(() => client.chatStream({ prompt: "hi" }), /stream failed/);
+    await assert.rejects(
+      () => client.chatStream({ prompt: "hi" }),
+      /stream failed/,
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("StreamReader.close cancels the underlying stream", async () => {
+  const server = await startServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/event-stream" });
+    res.write("data: one\n\n");
+    res.write("data: two\n\n");
+    res.end();
+  });
+  try {
+    const client = new HawkClient({ baseURL: server.url });
+    const reader = await client.chatStream({ prompt: "hi" });
+    await reader.close();
+    // After close, next() should return null (stream done).
+    const result = await reader.next();
+    assert.equal(result, null);
   } finally {
     await server.close();
   }

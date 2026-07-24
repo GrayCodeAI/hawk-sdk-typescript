@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { HawkClient, NotFoundError, AuthenticationError } from "../src/index.js";
+import {
+  HawkClient,
+  NotFoundError,
+  AuthenticationError,
+} from "../src/index.js";
 import { json, startServer } from "./helpers.js";
 
 test("health returns daemon status", async () => {
@@ -60,7 +64,10 @@ test("sends Authorization header when apiKey is set", async () => {
     json(res, 200, { status: "ok" });
   });
   try {
-    const client = new HawkClient({ baseURL: server.url, apiKey: "secret-key" });
+    const client = new HawkClient({
+      baseURL: server.url,
+      apiKey: "secret-key",
+    });
     await client.health();
     assert.equal(seenAuth, "Bearer secret-key");
   } finally {
@@ -182,6 +189,26 @@ test("stats returns aggregated usage", async () => {
     const stats = await client.stats();
     assert.equal(stats.total_sessions, 3);
     assert.equal(stats.models[0]?.model, "m");
+  } finally {
+    await server.close();
+  }
+});
+
+test("deleteSession maps 404 to NotFoundError", async () => {
+  const server = await startServer((_req, res) => {
+    json(res, 404, { error: "session not found", code: "not_found" });
+  });
+  try {
+    const client = new HawkClient({ baseURL: server.url });
+    await assert.rejects(
+      () => client.deleteSession("missing"),
+      (err: unknown) => {
+        assert.ok(err instanceof NotFoundError);
+        assert.equal(err.statusCode, 404);
+        assert.equal(err.code, "not_found");
+        return true;
+      },
+    );
   } finally {
     await server.close();
   }

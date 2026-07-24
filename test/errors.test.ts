@@ -3,9 +3,13 @@ import { test } from "node:test";
 
 import {
   APIError,
+  AuthenticationError,
   BadRequestError,
+  ForbiddenError,
   InternalServerError,
+  NotFoundError,
   RateLimitError,
+  ServiceUnavailableError,
   parseAPIError,
 } from "../src/index.js";
 
@@ -54,4 +58,52 @@ test("unknown status maps to the base APIError", async () => {
   );
   assert.equal(err.constructor, APIError);
   assert.equal(err.statusCode, 418);
+});
+
+test("401 maps to AuthenticationError", async () => {
+  const err = await parseAPIError(
+    resp(401, JSON.stringify({ error: "unauthorized" })),
+  );
+  assert.ok(err instanceof AuthenticationError);
+  assert.equal(err.statusCode, 401);
+});
+
+test("403 maps to ForbiddenError", async () => {
+  const err = await parseAPIError(
+    resp(403, JSON.stringify({ error: "forbidden" })),
+  );
+  assert.ok(err instanceof ForbiddenError);
+  assert.equal(err.statusCode, 403);
+});
+
+test("404 maps to NotFoundError", async () => {
+  const err = await parseAPIError(
+    resp(404, JSON.stringify({ error: "not found" })),
+  );
+  assert.ok(err instanceof NotFoundError);
+  assert.equal(err.statusCode, 404);
+});
+
+test("503 maps to ServiceUnavailableError", async () => {
+  const err = await parseAPIError(
+    resp(503, JSON.stringify({ error: "service unavailable" })),
+  );
+  assert.ok(err instanceof ServiceUnavailableError);
+  assert.equal(err.statusCode, 503);
+});
+
+test("error classes are instanceof APIError", async () => {
+  // All typed errors should inherit from APIError so callers can catch broadly.
+  const errors = [
+    await parseAPIError(resp(400, "{}")),
+    await parseAPIError(resp(401, "{}")),
+    await parseAPIError(resp(403, "{}")),
+    await parseAPIError(resp(404, "{}")),
+    await parseAPIError(resp(429, "{}")),
+    await parseAPIError(resp(500, "{}")),
+    await parseAPIError(resp(503, "{}")),
+  ];
+  for (const err of errors) {
+    assert.ok(err instanceof APIError, `${err.constructor.name} not instanceof APIError`);
+  }
 });

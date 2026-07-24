@@ -88,13 +88,20 @@ export class HawkClient {
   }
 
   /** chatStream sends a prompt and streams the response via SSE. */
-  async chatStream(req: ChatRequest, signal?: AbortSignal): Promise<StreamReader> {
+  async chatStream(
+    req: ChatRequest,
+    signal?: AbortSignal,
+  ): Promise<StreamReader> {
     const headers = this.jsonHeaders();
     headers.set("Accept", "text/event-stream");
     const resp = await this.send(
       "POST",
       `${this.baseURL}/v1/chat`,
-      { headers: Object.fromEntries(headers), body: JSON.stringify(req), signal },
+      {
+        headers: Object.fromEntries(headers),
+        body: JSON.stringify(req),
+        signal,
+      },
       false,
     );
     if (resp.status !== 200) {
@@ -302,7 +309,11 @@ export class HawkClient {
     const resp = await this.send(
       "POST",
       this.baseURL + path,
-      { headers: Object.fromEntries(headers), body: JSON.stringify(body), signal },
+      {
+        headers: Object.fromEntries(headers),
+        body: JSON.stringify(body),
+        signal,
+      },
       false,
     );
     // Accept any 2xx status.

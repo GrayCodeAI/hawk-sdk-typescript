@@ -11,7 +11,11 @@ import {
 } from "../src/index.js";
 import { json, startServer } from "./helpers.js";
 
-const fastRetry = { ...defaultRetryConfig(), initialBackoffMs: 1, maxBackoffMs: 5 };
+const fastRetry = {
+  ...defaultRetryConfig(),
+  initialBackoffMs: 1,
+  maxBackoffMs: 5,
+};
 
 test("default retry config retries transient statuses", () => {
   const cfg = defaultRetryConfig();

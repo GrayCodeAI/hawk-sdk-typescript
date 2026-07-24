@@ -9,7 +9,11 @@ import {
   parseAPIError,
 } from "../src/index.js";
 
-function resp(status: number, body: string, headers: Record<string, string> = {}): Response {
+function resp(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+): Response {
   return new Response(body, { status, headers });
 }
 
@@ -45,7 +49,9 @@ test("rate limit captures Retry-After seconds", async () => {
 });
 
 test("unknown status maps to the base APIError", async () => {
-  const err = await parseAPIError(resp(418, JSON.stringify({ error: "teapot" })));
+  const err = await parseAPIError(
+    resp(418, JSON.stringify({ error: "teapot" })),
+  );
   assert.equal(err.constructor, APIError);
   assert.equal(err.statusCode, 418);
 });

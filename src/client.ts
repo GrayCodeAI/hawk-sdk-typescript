@@ -8,6 +8,11 @@
 
 import { parseAPIError } from "./errors.js";
 import {
+  parseGraphExport,
+  type GraphExport,
+  type GraphOptions,
+} from "./graph.js";
+import {
   backoffDurationMs,
   parseRetryAfterMs,
   retryableForMethod,
@@ -139,6 +144,27 @@ export class HawkClient {
       paginationParams(opts),
       signal,
     );
+  }
+
+  /** graph gets the privacy-safe portable execution graph for a persisted session. */
+  async graph(
+    sessionID: string,
+    opts?: GraphOptions,
+    signal?: AbortSignal,
+  ): Promise<GraphExport> {
+    const params = new URLSearchParams();
+    if (opts?.repository !== undefined) {
+      params.set("repository", opts.repository);
+    }
+    for (const checkpointID of opts?.traceCheckpoints ?? []) {
+      params.append("trace_checkpoint", checkpointID);
+    }
+    const value = await this.getJSON<unknown>(
+      `/v1/sessions/${encodeURIComponent(sessionID)}/graph`,
+      params,
+      signal,
+    );
+    return parseGraphExport(value);
   }
 
   /** deleteSession deletes a session by ID. */

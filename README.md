@@ -162,11 +162,21 @@ already began processing the request.
 | `sessions(signal?)` | List active sessions |
 | `session(id, signal?)` | Get a session by ID |
 | `messages(id, opts?, signal?)` | Paginated session messages |
+| `graph(id, opts?, signal?)` | Get and validate a privacy-safe session execution graph |
 | `deleteSession(id, signal?)` | Delete a session |
 | `stats(signal?)` | Aggregated usage statistics |
 
 Every method accepts an optional `AbortSignal` as its last argument for
 cancellation.
+
+### Portable graph models
+
+`GraphExport`, `GraphNode`, `GraphEdge`, and `GraphEvent` describe the shared
+`*.graph/v1` wire format. Use `parseGraphExport(value)` at an untrusted API
+boundary to validate vocabulary, timestamps, unique IDs, provenance, and
+self-contained topology. `client.graph()` retrieves the authenticated
+`/v1/sessions/{id}/graph` projection and applies this parser before returning.
+These models are consumers only; the SDK does not own graph facts or storage.
 
 ## Development
 

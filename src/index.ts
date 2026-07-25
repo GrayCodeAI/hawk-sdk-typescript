@@ -20,3 +20,4 @@ export * from "./tools.js";
 export * from "./version.js";
 export * from "./client.js";
 export * from "./agent.js";
+export * from "./graph.js";

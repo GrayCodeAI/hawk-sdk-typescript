@@ -156,6 +156,50 @@ test("messages applies pagination query params", async () => {
   }
 });
 
+test("graph requests and validates a portable session projection", async () => {
+  let seenAuth: string | undefined;
+  const now = new Date().toISOString();
+  const server = await startServer((req, res) => {
+    const requestURL = new URL(req.url ?? "", "http://localhost");
+    assert.equal(requestURL.pathname, "/v1/sessions/session-1/graph");
+    assert.equal(requestURL.searchParams.get("repository"), "hawk");
+    assert.deepEqual(requestURL.searchParams.getAll("trace_checkpoint"), [
+      "012345abcdef",
+      "fedcba987654",
+    ]);
+    seenAuth = req.headers.authorization;
+    json(res, 200, {
+      schema_version: "hawk.graph/v1",
+      generated_at: now,
+      nodes: [
+        {
+          id: "hawk/session/session-1",
+          kind: "execution",
+          created_at: now,
+          provenance: { producer: "hawk" },
+        },
+      ],
+      edges: [],
+      events: [],
+    });
+  });
+  try {
+    const client = new HawkClient({
+      baseURL: server.url,
+      apiKey: "secret",
+    });
+    const graph = await client.graph("session-1", {
+      repository: "hawk",
+      traceCheckpoints: ["012345abcdef", "fedcba987654"],
+    });
+    assert.equal(graph.schema_version, "hawk.graph/v1");
+    assert.equal(graph.nodes[0]?.id, "hawk/session/session-1");
+    assert.equal(seenAuth, "Bearer secret");
+  } finally {
+    await server.close();
+  }
+});
+
 test("deleteSession accepts 204 No Content", async () => {
   let seenMethod: string | undefined;
   const server = await startServer((req, res) => {

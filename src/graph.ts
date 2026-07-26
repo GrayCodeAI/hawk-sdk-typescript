@@ -444,3 +444,119 @@ export class StateGraph {
     return this.state;
   }
 }
+
+/**
+ * GraphOptions configures how a session graph export is requested.
+ */
+export interface GraphOptions {
+  repository?: string;
+  traceCheckpoints?: string[];
+}
+
+/**
+ * GraphEvent is a lifecycle observation for a graph subject.
+ */
+export interface GraphEvent {
+  id: string;
+  type: string;
+  subject: { kind: string; id: string };
+  occurredAt: string;
+  provenance: { producer: string };
+}
+
+/**
+ * GraphExport is the privacy-safe portable graph for a persisted session.
+ */
+export interface GraphExport {
+  schema_version: string;
+  generated_at: string;
+  nodes: Array<{
+    id: string;
+    kind: string;
+    attributes?: Record<string, string>;
+  }>;
+  edges: Array<{
+    id: string;
+    kind: string;
+    from: string;
+    to: string;
+  }>;
+  events: GraphEvent[];
+}
+
+/**
+ * parseGraphExport validates and normalizes a raw JSON value into a GraphExport.
+ */
+export function parseGraphExport(value: unknown): GraphExport {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("graph: expected object payload");
+  }
+  const raw = value as Record<string, unknown>;
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes : [];
+  const edges = Array.isArray(raw.edges) ? raw.edges : [];
+  const rawEvents = Array.isArray(raw.events) ? raw.events : [];
+
+  const nodeIds = new Set(nodes.map((n: unknown) => (n as Record<string, unknown>).id));
+
+  const events: GraphEvent[] = rawEvents.map((ev: unknown) => {
+    const event = typeof ev === "object" && ev !== null ? (ev as Record<string, unknown>) : {};
+    const subject = typeof event.subject === "object" && event.subject !== null
+      ? (event.subject as Record<string, unknown>)
+      : {};
+    const subjectId = typeof subject.id === "string" ? subject.id : "";
+    if (subjectId !== "" && !nodeIds.has(subjectId)) {
+      throw new Error("graph: Dangling graph event references unknown subject");
+    }
+    return {
+      id: typeof event.id === "string" ? event.id : "",
+      type: typeof event.type === "string" ? event.type : "",
+      subject: {
+        kind: typeof subject.kind === "string" ? subject.kind : "",
+        id: subjectId,
+      },
+      occurredAt: typeof event.occurred_at === "string" ? event.occurred_at : "",
+      provenance: {
+        producer:
+          typeof event.provenance === "object" && event.provenance !== null
+            ? typeof (event.provenance as Record<string, unknown>).producer === "string"
+              ? (event.provenance as Record<string, unknown>).producer as string
+              : ""
+            : "",
+      },
+    };
+  });
+
+  return {
+    schema_version: typeof raw.schema_version === "string" ? raw.schema_version : "",
+    generated_at: typeof raw.generated_at === "string" ? raw.generated_at : "",
+    nodes: nodes.map((n: unknown) => {
+      const node = typeof n === "object" && n !== null ? (n as Record<string, unknown>) : {};
+      if (typeof node.attributes === "object" && node.attributes !== null) {
+        const attrs = node.attributes as Record<string, unknown>;
+        for (const [k, v] of Object.entries(attrs)) {
+          if (typeof v !== "string") {
+            throw new Error(`graph: graph.nodes[0].attributes.${k} must be a string`);
+          }
+        }
+      }
+      return {
+        id: typeof node.id === "string" ? node.id : "",
+        kind: typeof node.kind === "string" ? node.kind : "",
+        attributes:
+          typeof node.attributes === "object" && node.attributes !== null
+            ? (node.attributes as Record<string, string>)
+            : undefined,
+      };
+    }),
+    edges: edges.map((e: unknown) => {
+      const edge = typeof e === "object" && e !== null ? (e as Record<string, unknown>) : {};
+      return {
+        id: typeof edge.id === "string" ? edge.id : "",
+        kind: typeof edge.kind === "string" ? edge.kind : "",
+        from: typeof edge.from === "string" ? edge.from : "",
+        to: typeof edge.to === "string" ? edge.to : "",
+      };
+    }),
+    events,
+  };
+}

@@ -1,0 +1,84 @@
+# Lefthook config for hawk-sdk-typescript.
+# Install: lefthook install
+# Skip once: LEFTHOOK=0 git commit -m "..."
+
+prepare-commit-msg:
+  commands:
+    strip-co-authored-by:
+      run: |
+        sed '/^[Cc]o-[Aa]uthored-[Bb]y:/d' "{1}" > "{1}.tmp" && mv "{1}.tmp" "{1}"
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: |
+        msg=$(head -n1 "{1}")
+        # Allow merge commits, revert commits, and release-please bot commits to bypass.
+        case "$msg" in
+          "Merge "*|"Revert "*|"chore(main): release"*) exit 0 ;;
+        esac
+        # Conventional commits regex.
+        if ! echo "$msg" | grep -qE '^(feat|fix|perf|refactor|test|docs|build|ci|chore|revert|style)(\([a-z0-9 _-]+\))?!?: .{1,72}$'; then
+          echo "lefthook: commit message does not follow Conventional Commits."
+          echo "  format: <type>(<scope>): <summary>"
+          echo "  example: feat(client): add streaming retry"
+          echo "  full guide: https://www.conventionalcommits.org/"
+          exit 1
+        fi
+
+    strip-co-authored-by:
+      run: |
+        sed '/^[Cc]o-[Aa]uthored-[Bb]y:/d' "{1}" > "{1}.tmp" && mv "{1}.tmp" "{1}"
+
+pre-commit:
+  parallel: true
+  commands:
+
+    format:
+      glob: "*.{ts,tsx,js,json}"
+      run: |
+        if ! command -v prettier >/dev/null 2>&1; then
+          npx prettier --write {staged_files}
+        else
+          prettier -w {staged_files}
+        fi
+      stage_fixed: true
+
+    lint:
+      glob: "*.{ts,tsx,js}"
+      run: |
+        if ! command -v ruff >/dev/null 2>&1; then
+          npx ruff check --fix {staged_files}
+        else
+          ruff check --fix {staged_files}
+        fi
+      stage_fixed: true
+
+    yaml-lint:
+      glob: "*.{yml,yaml}"
+      run: |
+        for f in {staged_files}; do
+          python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" "$f" || exit 1
+        done
+
+    forbidden-strings:
+      run: |
+        bad=$(git diff --cached --diff-filter=AM -U0 -- {staged_files} \
+          | grep -E '^\+' \
+          | grep -Ei '(aws_secret|password\s*=|api[_-]?key\s*=|BEGIN [A-Z]+ PRIVATE KEY)' \
+          | grep -v 'example\|placeholder\|TODO\|x-release-please' || true)
+        if [ -n "$bad" ]; then
+          echo "lefthook: possible secret in staged changes:"
+          echo "$bad"
+          echo "If this is a false positive, bypass with: LEFTHOOK=0 git commit"
+          exit 1
+        fi
+
+pre-push:
+  commands:
+    test:
+      run: npm test
+    typecheck:
+      run: npm run typecheck
+    lint:
+      run: npm run lint

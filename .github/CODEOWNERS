@@ -1,0 +1,16 @@
+# CODEOWNERS for hawk-sdk-typescript
+* @GrayCodeAI/maintainers
+
+# SDK source
+/src/            @GrayCodeAI/core-team
+/tests/          @GrayCodeAI/core-team
+
+# CI / release / build tooling
+/.github/        @GrayCodeAI/devops-team
+/Makefile        @GrayCodeAI/devops-team
+package.json     @GrayCodeAI/devops-team
+tsconfig.json    @GrayCodeAI/devops-team
+
+# Documentation
+*.md             @GrayCodeAI/docs-team
+/docs/           @GrayCodeAI/docs-team

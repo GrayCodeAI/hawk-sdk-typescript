@@ -21,3 +21,4 @@ export * from "./version.js";
 export * from "./client.js";
 export * from "./agent.js";
 export * from "./graph.js";
+export * from "./composio_cognee.js";
